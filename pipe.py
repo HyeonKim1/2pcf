@@ -22,60 +22,61 @@ class twopcf:
 
     def Natural(self,bins=10):
         self.DD,array=self.cal_corr_same_data(self.data,bins,self.hist_range)
-        print('make DD done')
+        if self.rank==0 : print('make DD done')
         self.RR,array=self.cal_corr_same_data(self.random_data,bins,self.hist_range)
-        print('make RR done')
+        if self.rank==0 : print('make RR done')
 
         return (self.DD/self.RR)-1 ,array
     
     def DP(self,bins=10):
         self.DD,array=self.cal_corr_same_data(self.data,bins,self.hist_range)
-        print('make DD done')
+        if self.rank==0 : print('make DD done')
         self.DR,array=self.cal_corr_DR(self.data,self.random_data,bins,self.hist_range)
-        print('make DR done')
+        if self.rank==0 : print('make DR done')
+
         return (self.DD/self.DR)-1, array
     
     def Hamilton(self,bins=10):
         
         self.DD,array=self.cal_corr_same_data(self.data,bins,self.hist_range)
-        print('make DD done')
+        if self.rank==0 : print('make DD done')
         self.RR,array=self.cal_corr_same_data(self.random_data,bins,self.hist_range)
-        print('make RR done')
+        if self.rank==0 : print('make RR done')
         self.DR,array=self.cal_corr_DR(self.data,self.random_data,bins,self.hist_range)
-        print('make DR done')
+        if self.rank==0 : print('make DR done')
 
         return (self.DD*self.RR/(self.DR**2))-1, array
     
     def LS(self,bins=10):
         
         self.DD,array=self.cal_corr_same_data(self.data,bins,self.hist_range)
-        print('make DD done')
+        if self.rank==0 : print('make DD done')
     
         self.RR,array=self.cal_corr_same_data(self.random_data,bins,self.hist_range)
-        print('make RR done')
+        if self.rank==0 : print('make RR done')
     
         self.DR,array=self.cal_corr_DR(self.data,self.random_data,bins,self.hist_range)
-        print('make DR done')
+        if self.rank==0 : print('make DR done')
 
         return (self.DD-2*self.DR+self.RR)/self.RR, array
     
     def cal_corr_same_data(self,data,bins,hist_range):
-        rank = comm.Get_rank()
-        size = comm.Get_size()
+        self.rank = comm.Get_rank()
+        self.size = comm.Get_size()
 
-        local_size = int(len(data) / size)
-        extra = np.mod(len(data), size)
+        local_size = int(len(data) / self.size)
+        extra = np.mod(len(data), self.size)
 
-        if (rank < extra):
+        if (self.rank < extra):
             local_size = local_size + 1
-            start_idx = rank * local_size
+            start_idx = self.rank * local_size
         else:
-            start_idx = rank * local_size + extra 
+            start_idx = self.rank * local_size + extra 
 
         end_idx = start_idx + local_size - 1
 
         hist=np.zeros(bins)
-        if rank == 0:
+        if self.rank == 0:
             iterator = tqdm(range(start_idx, end_idx), desc="Progress")
         else:
             iterator = range(start_idx, end_idx)
@@ -90,22 +91,22 @@ class twopcf:
         return global_hist/np.sum(global_hist), array
     
     def cal_corr_DR(self,data,random_data,bins,hist_range):
-        rank = comm.Get_rank()
-        size = comm.Get_size()
+        self.rank = comm.Get_rank()
+        self.size = comm.Get_size()
 
-        local_size = int(len(data) / size)
-        extra = np.mod(len(data), size)
+        local_size = int(len(data) / self.size)
+        extra = np.mod(len(data), self.size)
 
-        if (rank < extra):
+        if (self.rank < extra):
             local_size = local_size + 1
-            start_idx = rank * local_size
+            start_idx = self.rank * local_size
         else:
-            start_idx = rank * local_size + extra 
+            start_idx = self.rank * local_size + extra 
 
         end_idx = start_idx + local_size - 1
 
         hist=np.zeros(bins)
-        if rank == 0:
+        if self.rank == 0:
             iterator = tqdm(range(start_idx, end_idx), desc="Progress")
         else:
             iterator = range(start_idx, end_idx)
