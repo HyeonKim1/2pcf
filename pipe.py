@@ -18,7 +18,7 @@ class twopcf:
             self.min_scale=boxscale[0]
             self.max_scale=boxscale[1]
         self.random_data=np.random.uniform(self.min_scale,self.max_scale,size=(int(random_scale*self.N_data),3))
-        self.hist_range=np.array([self.min_scale,self.max_scale])
+        self.hist_range=np.array([0,np.sqrt(3)*self.max_scale])
 
     def Natural(self,bins=10):
         self.DD,array=self.cal_corr_same_data(self.data,bins,self.hist_range)
@@ -64,8 +64,8 @@ class twopcf:
         self.rank = comm.Get_rank()
         self.size = comm.Get_size()
 
-        local_size = int(len(data) / self.size)
-        extra = np.mod(len(data), self.size)
+        local_size = int((len(data)-1) / self.size)
+        extra = np.mod((len(data)-1), self.size)
 
         if (self.rank < extra):
             local_size = local_size + 1
@@ -73,22 +73,22 @@ class twopcf:
         else:
             start_idx = self.rank * local_size + extra 
 
-        end_idx = start_idx + local_size - 1
+        end_idx = start_idx + local_size 
 
         hist=np.zeros(bins)
         if self.rank == 0:
             iterator = tqdm(range(start_idx, end_idx), desc="Progress")
         else:
             iterator = range(start_idx, end_idx)
-
+            
         for ii in iterator:
-            distance=np.sqrt(np.sum((data[ii:]-data[ii])**2,axis=1))
+            distance=np.sqrt(np.sum((data[(ii+1):]-data[ii])**2,axis=1))
             hist1,array=np.histogram(distance,bins=bins,range=hist_range)
             hist = hist+hist1
         array = (array[:-1] + array[1:]) / 2
         global_hist=comm.allreduce(hist, op=MPI.SUM)
 
-        return global_hist/np.sum(global_hist), array
+        return global_hist/(len(data)*(len(data)-1)/2), array
     
     def cal_corr_DR(self,data,random_data,bins,hist_range):
         self.rank = comm.Get_rank()
@@ -119,7 +119,7 @@ class twopcf:
         global_hist=comm.allreduce(hist, op=MPI.SUM)
         array = (array[:-1] + array[1:]) / 2
 
-        return global_hist/np.sum(global_hist), array
+        return global_hist/(len(data)*len(random_data)), array
 
         
 class read_Gadget4:
